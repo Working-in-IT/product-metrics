@@ -1,0 +1,15 @@
+{
+  "name": "working-in-it-metrics",
+  "description": "Product Metrics: каталог и система продуктовых метрик для работы с агентом.",
+  "owner": {
+    "name": "Working in IT"
+  },
+  "plugins": [
+    {
+      "name": "product-metrics",
+      "source": "./plugins/product-metrics",
+      "description": "Каталог и система продуктовых метрик: настройка, определения, связи и проверка.",
+      "version": "0.1.0"
+    }
+  ]
+}

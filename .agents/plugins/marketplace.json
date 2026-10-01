@@ -1,0 +1,20 @@
+{
+  "name": "working-in-it-metrics",
+  "interface": {
+    "displayName": "Working in IT · Product Metrics"
+  },
+  "plugins": [
+    {
+      "name": "product-metrics",
+      "source": {
+        "source": "local",
+        "path": "./plugins/product-metrics"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "product-metrics",
+  "version": "0.1.0",
+  "description": "Каталог и система продуктовых метрик: настройка, определения, связи и проверка.",
+  "author": {
+    "name": "Working in IT",
+    "url": "https://github.com/Working-in-IT"
+  },
+  "homepage": "https://github.com/Working-in-IT/product-metrics",
+  "repository": "https://github.com/Working-in-IT/product-metrics",
+  "license": "MIT"
+}
