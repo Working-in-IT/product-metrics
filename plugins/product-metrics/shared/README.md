@@ -4,6 +4,7 @@
 
 - [Формат](references/FORMAT.md): поля карточки, версии и типы связей.
 - [Плейбук](references/PLAYBOOK.md): операции с определениями.
+- [Как посчитать](references/CALCULATION.md): SQL, параметры, зависимости и свидетельства проверки; [запускаемые примеры](examples/sql/README.md).
 - [Профиль каталога](templates/CATALOG.md): шаблон настройки местных путей.
 - [Карточка](templates/metric.md), [реестр](templates/INDEX.md), [система](templates/METRICS_SYSTEM.md): бланки.
 - [Учебный каталог](examples/INDEX.md): шесть вымышленных определений двух продуктов.

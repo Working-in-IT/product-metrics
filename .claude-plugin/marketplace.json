@@ -9,7 +9,7 @@
       "name": "product-metrics",
       "source": "./plugins/product-metrics",
       "description": "Каталог и система продуктовых метрик: настройка, определения, связи и проверка.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }

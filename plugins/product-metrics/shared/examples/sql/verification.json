@@ -1,0 +1,46 @@
+{
+  "checked_on": "2026-10-01",
+  "definition_version": 1,
+  "implementation_version": 1,
+  "status": "passed",
+  "scope": "synthetic prepared rows; raw-event preparation not tested",
+  "engine": "SQLite 3.52.0",
+  "cases": [
+    "monthly_cohort_and_product",
+    "successful_time_and_next_month_completion",
+    "maturity_boundary",
+    "immature_cohort",
+    "empty_cohort",
+    "no_successes",
+    "duplicate_prepared_scenario",
+    "missing_success_duration",
+    "negative_duration",
+    "success_after_deadline"
+  ],
+  "parameters": {
+    "product_id": "beacon",
+    "period_start": "2026-08-01T00:00:00Z",
+    "period_end": "2026-09-01T00:00:00Z",
+    "as_of": "2026-09-04T00:00:00Z"
+  },
+  "success_rate": {
+    "product_id": "beacon",
+    "period_start": "2026-08-01T00:00:00Z",
+    "period_end": "2026-09-01T00:00:00Z",
+    "as_of": "2026-09-04T00:00:00Z",
+    "attempts": 6,
+    "successes": 3,
+    "calculation_status": "calculated",
+    "success_rate": 0.5
+  },
+  "successful_scenario_time_mean": {
+    "product_id": "beacon",
+    "period_start": "2026-08-01T00:00:00Z",
+    "period_end": "2026-09-01T00:00:00Z",
+    "as_of": "2026-09-04T00:00:00Z",
+    "successes": 3,
+    "duration_sum_seconds": 97200,
+    "calculation_status": "calculated",
+    "mean_seconds": 32400.0
+  }
+}
