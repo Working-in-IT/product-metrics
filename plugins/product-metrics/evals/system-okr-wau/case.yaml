@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: system-okr-wau
+context:
+  # scaffold_script - путь к файлу внутри папки кейса, не текст скрипта.
+  scaffold_script: scaffold.sh

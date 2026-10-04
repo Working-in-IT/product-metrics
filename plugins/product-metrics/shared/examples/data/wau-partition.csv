@@ -1,0 +1,5 @@
+week,retained,new,resurrected,wau,note
+t0,,,,4,
+t1,2,2,1,5,
+t2,,,,5.5,modelled: WAU(t+1) = WAU(t)/2 + 3
+t3,,,,5.75,modelled: WAU(t+1) = WAU(t)/2 + 3
