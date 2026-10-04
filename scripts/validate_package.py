@@ -7,6 +7,13 @@ from pathlib import Path
 
 import yaml
 
+EXPECTED_SKILLS = {"metrics-setup", "metric-catalog", "metrics-system", "metrics-review", "diagnose-metric", "metrics-memo"}
+EXPECTED_PRODUCTS = {"atlas", "beacon", "shop", "platform"}
+EXPECTED_CARDS = 16
+AMBIGUOUS_ALIAS = ("MAU", 2)
+SKILL_BODY_MAX_WORDS = 400
+SKILL_DESCRIPTION_MAX_CHARS = 1024
+
 
 def require(condition, message):
     if not condition:
@@ -44,13 +51,13 @@ def validate(root):
     root = root.resolve()
     plugin = root / "plugins/product-metrics"
     shared = plugin / "shared"
-    manifests = [json.loads((plugin / p).read_text()) for p in ("plugin.json", ".codex-plugin/plugin.json", ".claude-plugin/plugin.json")]
+    manifests = [json.loads((plugin / p).read_text(encoding="utf-8")) for p in ("plugin.json", ".codex-plugin/plugin.json", ".claude-plugin/plugin.json")]
     for manifest in manifests:
         for key in ("name", "version", "license", "repository"):
             require(manifest[key] == manifests[0][key], f"Manifest mismatch: {key}")
     require(manifests[0]["name"] == "product-metrics", "Plugin name")
     for file, kind in ((".agents/plugins/marketplace.json", "codex"), (".claude-plugin/marketplace.json", "claude")):
-        market = json.loads((root / file).read_text())
+        market = json.loads((root / file).read_text(encoding="utf-8"))
         require(market["name"] == "working-in-it-metrics" and len(market["plugins"]) == 1, "Marketplace identity")
         entry = market["plugins"][0]
         source = entry["source"]["path"] if kind == "codex" else entry["source"]
@@ -59,11 +66,16 @@ def validate(root):
             require(entry["version"] == manifests[0]["version"], "Marketplace version")
 
     skills = list((plugin / "skills").glob("*/SKILL.md"))
-    require({p.parent.name for p in skills} == {"metrics-setup", "metric-catalog", "metrics-system", "metrics-review"}, "Expected four skills")
+    found_skills = {p.parent.name for p in skills}
+    require(found_skills == EXPECTED_SKILLS, f"Skill set differs: missing {sorted(EXPECTED_SKILLS - found_skills)}, extra {sorted(found_skills - EXPECTED_SKILLS)}")
     for path in skills:
         meta = frontmatter(path)
         require(meta["name"] == path.parent.name and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", meta["name"]), f"Skill name: {path}")
-        require(isinstance(meta["description"], str) and 0 < len(meta["description"]) <= 1024, f"Skill description: {path}")
+        description = meta["description"]
+        require(isinstance(description, str) and 0 < len(description) <= SKILL_DESCRIPTION_MAX_CHARS, f"Skill description: {path}")
+        require(re.search(r"[А-Яа-яЁё]", description) and re.search(r"[A-Za-z]{4}", description), f"Description needs Russian and English sentences: {path}")
+        body = re.sub(r"\A---\n.*?\n---\n", "", path.read_text(encoding="utf-8"), count=1, flags=re.S)
+        require(len(body.split()) <= SKILL_BODY_MAX_WORDS, f"Skill body over {SKILL_BODY_MAX_WORDS} words: {path}")
 
     required = {"schema_version", "id", "name", "product_id", "aliases", "definition_version", "status", "owner", "unit", "effective_from", "last_reviewed_at"}
     cards = {}
@@ -82,10 +94,11 @@ def validate(root):
         for field in ("effective_from", "last_reviewed_at"):
             require(meta[field] is None or (isinstance(meta[field], str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta[field])), f"Quote date: {field}")
         cards[meta["id"]] = (path, meta)
-    require(len(cards) == 6, "Expected six synthetic cards")
+    require(len(cards) == EXPECTED_CARDS, f"Expected {EXPECTED_CARDS} synthetic cards, found {len(cards)}")
+    require({m["product_id"] for _, m in cards.values()} == EXPECTED_PRODUCTS, "Synthetic products differ from expected set")
     index = shared / "examples/INDEX.md"
     rows = []
-    for line in index.read_text().splitlines():
+    for line in index.read_text(encoding="utf-8").splitlines():
         if not line.startswith("| "):
             continue
         cells = [c.strip() for c in line.strip("|").split("|")]
@@ -99,7 +112,8 @@ def validate(root):
         require(link and (index.parent / link[1]).resolve() == path, "Index link")
         rows.append(meta["id"])
     require(len(rows) == len(set(rows)) == len(cards), "Index coverage")
-    require(sum("MAU" in m["aliases"] for _, m in cards.values()) == 2, "Ambiguous alias fixture")
+    alias, count = AMBIGUOUS_ALIAS
+    require(sum(alias in m["aliases"] for _, m in cards.values()) == count, "Ambiguous alias fixture")
 
     links = 0
     for path in root.rglob("*"):
@@ -108,7 +122,7 @@ def validate(root):
         require(not path.is_symlink(), f"Symlink: {path}")
         if not path.is_file() or path.suffix != ".md":
             continue
-        body = re.sub(r"(?ms)^```.*?^```[^\n]*", "", path.read_text())
+        body = re.sub(r"(?ms)^```.*?^```[^\n]*", "", path.read_text(encoding="utf-8"))
         refs = re.findall(r"\]\(([^)]+)\)", body)
         for rel in frontmatter(path).get("relations", []):
             refs.extend(rel["evidence"])
