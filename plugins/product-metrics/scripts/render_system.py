@@ -12,12 +12,14 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Tuple
 
 try:
     import yaml
 except ImportError:
     yaml = None
+else:
+    from strict_yaml import UniqueKeyLoader
 
 ROLES = ("primary", "driver", "guardrail", "diagnostic")
 RELATION_STATUSES: dict[str, tuple[str, ...]] = {
@@ -61,7 +63,7 @@ def load_header(text: str) -> tuple[dict[str, Any] | None, list[Finding]]:
     if match is None:
         return None, [Finding("ERROR", "файл", "нет YAML-шапки между строками ---")]
     try:
-        data = yaml.safe_load(match.group(1))
+        data = yaml.load(match.group(1), Loader=UniqueKeyLoader)
     except yaml.YAMLError as exc:
         return None, [Finding("ERROR", "шапка", f"YAML не разобран: {exc}")]
     if not isinstance(data, dict):
@@ -93,11 +95,14 @@ def check_metric_entry(entry: Any, where: str, seen: set[str]) -> list[Finding]:
     return findings
 
 
-def check_goals(goals: Any) -> tuple[list[Finding], dict[str, dict[str, str]]]:
-    """Вернуть замечания и карту {goal_id: {metric_id: role}}."""
-    roles_by_goal: dict[str, dict[str, str]] = {}
+GoalMetrics = Dict[str, Dict[str, Any]]
+
+
+def check_goals(goals: Any) -> tuple[list[Finding], dict[str, GoalMetrics]]:
+    """Вернуть замечания и метрики каждой цели с ролью и версией."""
+    metrics_by_goal: dict[str, GoalMetrics] = {}
     if not isinstance(goals, list):
-        return [Finding("ERROR", "goals", "goals должен быть списком")], roles_by_goal
+        return [Finding("ERROR", "goals", "goals должен быть списком")], metrics_by_goal
     findings: list[Finding] = []
     for index, goal in enumerate(goals):
         where = f"goals[{index}]"
@@ -109,7 +114,7 @@ def check_goals(goals: Any) -> tuple[list[Finding], dict[str, dict[str, str]]]:
             findings.append(Finding("ERROR", where, "нет id цели"))
             continue
         where = f"goal {goal_id}"
-        if goal_id in roles_by_goal:
+        if goal_id in metrics_by_goal:
             findings.append(Finding("ERROR", where, "id цели повторяется"))
         for field in ("statement", "scope"):
             if not goal.get(field):
@@ -121,17 +126,18 @@ def check_goals(goals: Any) -> tuple[list[Finding], dict[str, dict[str, str]]]:
         seen: set[str] = set()
         for position, entry in enumerate(metrics):
             findings.extend(check_metric_entry(entry, f"{where} metrics[{position}]", seen))
-        roles = {e["metric_id"]: e.get("role") for e in metrics if isinstance(e, dict) and e.get("metric_id") in seen}
-        roles_by_goal[goal_id] = roles
-        if roles and "primary" not in roles.values():
+        members = {e["metric_id"]: e for e in metrics
+                   if isinstance(e, dict) and isinstance(e.get("metric_id"), str) and e["metric_id"] in seen}
+        metrics_by_goal[goal_id] = members
+        if members and not any(e.get("role") == "primary" for e in members.values()):
             findings.append(Finding("WARN", where, "нет метрики с ролью primary"))
-    return findings, roles_by_goal
+    return findings, metrics_by_goal
 
 
-def check_direction(relation: dict[str, Any], roles: dict[str, str], where: str) -> list[Finding]:
+def check_direction(relation: dict[str, Any], members: GoalMetrics, where: str) -> list[Finding]:
     """Эвристики направления по ролям: предупреждают, не блокируют."""
     kind, src, dst = relation["type"], relation["from"], relation["to"]
-    src_role, dst_role = roles.get(src), roles.get(dst)
+    src_role, dst_role = members[src].get("role"), members[dst].get("role")
     if kind == "guarded_by" and dst_role != "guardrail":
         return [Finding("WARN", where, f"guarded_by: {dst} не имеет роли guardrail; проверь, что `to` - страж")]
     if kind == "guarded_by" and src_role == "guardrail":
@@ -160,7 +166,7 @@ def check_status(relation: dict[str, Any], where: str) -> list[Finding]:
     return findings
 
 
-def check_relation(relation: Any, index: int, roles_by_goal: dict[str, dict[str, str]]) -> list[Finding]:
+def check_relation(relation: Any, index: int, metrics_by_goal: dict[str, GoalMetrics]) -> list[Finding]:
     where = f"relations[{index}]"
     if not isinstance(relation, dict):
         return [Finding("ERROR", where, "связь не является отображением")]
@@ -172,12 +178,12 @@ def check_relation(relation: Any, index: int, roles_by_goal: dict[str, dict[str,
     if not all(isinstance(relation[field], str) for field in ("from", "to", "goal_id")):
         return [Finding("ERROR", where, "from, to и goal_id должны быть строками")]
     where = f"{where} {relation['type']} {relation['from']} -> {relation['to']}"
-    roles = roles_by_goal.get(relation["goal_id"])
-    if roles is None:
+    members = metrics_by_goal.get(relation["goal_id"])
+    if members is None:
         return [Finding("ERROR", where, f"goal_id {relation['goal_id']!r} не найден")]
     findings: list[Finding] = []
     for end in ("from", "to"):
-        if relation[end] not in roles:
+        if relation[end] not in members:
             findings.append(Finding("ERROR", where, f"{end}: {relation[end]!r} нет в metrics цели {relation['goal_id']}"))
     if relation["from"] == relation["to"]:
         findings.append(Finding("ERROR", where, "связь метрики с самой собой"))
@@ -186,18 +192,21 @@ def check_relation(relation: Any, index: int, roles_by_goal: dict[str, dict[str,
         return findings
     if findings:
         return findings
-    return check_status(relation, where) + check_direction(relation, roles, where)
+    return check_status(relation, where) + check_direction(relation, members, where)
 
 
-def find_cycles(edges: list[tuple[str, str]]) -> list[list[str]]:
+MetricVersion = Tuple[str, int]
+
+
+def find_cycles(edges: list[tuple[MetricVersion, MetricVersion]]) -> list[list[MetricVersion]]:
     """Найти циклы в графе calculated_from поиском в глубину."""
-    graph: dict[str, list[str]] = {}
+    graph: dict[MetricVersion, list[MetricVersion]] = {}
     for src, dst in edges:
         graph.setdefault(src, []).append(dst)
-    state: dict[str, int] = {}
-    cycles: list[list[str]] = []
+    state: dict[MetricVersion, int] = {}
+    cycles: list[list[MetricVersion]] = []
 
-    def visit(node: str, path: list[str]) -> None:
+    def visit(node: MetricVersion, path: list[MetricVersion]) -> None:
         state[node] = 1
         path.append(node)
         for nxt in graph.get(node, []):
@@ -214,10 +223,10 @@ def find_cycles(edges: list[tuple[str, str]]) -> list[list[str]]:
     return cycles
 
 
-def check_duplicates_and_cycles(relations: list[Any]) -> list[Finding]:
+def check_duplicates_and_cycles(relations: list[Any], metrics_by_goal: dict[str, GoalMetrics]) -> list[Finding]:
     findings: list[Finding] = []
     seen: set[tuple[str, str, str, str]] = set()
-    calc_edges: list[tuple[str, str]] = []
+    calc_edges: list[tuple[MetricVersion, MetricVersion]] = []
     for index, rel in enumerate(relations):
         if not isinstance(rel, dict) or not all(f in rel for f in RELATION_FIELDS):
             continue
@@ -226,9 +235,15 @@ def check_duplicates_and_cycles(relations: list[Any]) -> list[Finding]:
             findings.append(Finding("WARN", f"relations[{index}]", "повтор связи с тем же типом, from, to и целью"))
         seen.add(triple)
         if rel["type"] == "calculated_from":
-            calc_edges.append((str(rel["from"]), str(rel["to"])))
+            _, src, dst, goal_id = triple
+            members = metrics_by_goal.get(goal_id, {})
+            src_version = members.get(src, {}).get("definition_version")
+            dst_version = members.get(dst, {}).get("definition_version")
+            if is_positive_int(src_version) and is_positive_int(dst_version):
+                calc_edges.append(((src, src_version), (dst, dst_version)))
     for cycle in find_cycles(calc_edges):
-        findings.append(Finding("ERROR", "calculated_from", "цикл в расчёте: " + " -> ".join(cycle)))
+        path = " -> ".join(f"{key} v{version}" for key, version in cycle)
+        findings.append(Finding("ERROR", "calculated_from", "цикл в расчёте: " + path))
     return findings
 
 
@@ -241,14 +256,14 @@ def validate(system: dict[str, Any]) -> list[Finding]:
             findings.append(Finding("ERROR", "шапка", f"нет поля {field}"))
     if system.get("status") not in ("draft", "agreed", "deprecated"):
         findings.append(Finding("ERROR", "шапка", f"status {system.get('status')!r} не из draft, agreed, deprecated"))
-    goal_findings, roles_by_goal = check_goals(system.get("goals"))
+    goal_findings, metrics_by_goal = check_goals(system.get("goals"))
     findings.extend(goal_findings)
     relations = system.get("relations")
     if not isinstance(relations, list):
         return findings + [Finding("ERROR", "relations", "relations должен быть списком")]
     for index, relation in enumerate(relations):
-        findings.extend(check_relation(relation, index, roles_by_goal))
-    findings.extend(check_duplicates_and_cycles(relations))
+        findings.extend(check_relation(relation, index, metrics_by_goal))
+    findings.extend(check_duplicates_and_cycles(relations, metrics_by_goal))
     return findings
 
 

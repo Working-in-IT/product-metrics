@@ -17,6 +17,7 @@
 
 ### Контрольные карты и вариация
 
+- NIST/SEMATECH — [Proportions Control Charts](https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc332.htm).
 - NIST/SEMATECH - 6.3.2.2. Individuals Control Charts - https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc322.htm
 - NIST/SEMATECH - 6.3.2.1. Shewhart X-bar and R and S Control Charts - https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc321.htm
 - Wikipedia - Western Electric rules - https://en.wikipedia.org/wiki/Western_Electric_rules
@@ -73,6 +74,8 @@
 - Cedric Chin (Commoncog) - Goodhart's Law Isn't as Useful as You Might Think - https://commoncog.com/goodharts-law-not-useful/
 
 ### Деревья метрик и North Star
+
+- Shane Butler / AI Analyst Lab — [North Star](https://github.com/ai-analyst-lab/north-star/tree/57b86e675213e67d9fc8b982cdf6fbf5a2d007e2), сценарии навыка и проверка входов. [Разделение авторства проекта и материалов Amplitude](https://github.com/ai-analyst-lab/north-star/blob/57b86e675213e67d9fc8b982cdf6fbf5a2d007e2/ATTRIBUTION.md).
 
 - Dillon Baker (Mixpanel) - What is a metric tree? - https://mixpanel.com/blog/metric-tree/
 - Syrus Islam - Reconceptualizing the notion of relations underlying performance measurement models - https://openrepository.aut.ac.nz/bitstreams/9cf3f3f4-52c6-4595-b20b-890fcdb25f02/download

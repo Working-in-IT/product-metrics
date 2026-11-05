@@ -7,7 +7,10 @@ from pathlib import Path
 
 import yaml
 
-EXPECTED_SKILLS = {"metrics-setup", "metric-catalog", "metrics-system", "metrics-review", "diagnose-metric", "metrics-memo"}
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "plugins/product-metrics/scripts"))
+from strict_yaml import UniqueKeyLoader
+
+EXPECTED_SKILLS = {"metrics-setup", "metric-catalog", "metrics-system", "metrics-review", "diagnose-metric", "metrics-memo", "north-star"}
 EXPECTED_PRODUCTS = {"atlas", "beacon", "shop", "platform"}
 EXPECTED_CARDS = 16
 AMBIGUOUS_ALIAS = ("MAU", 2)
@@ -20,29 +23,13 @@ def require(condition, message):
         raise ValueError(message)
 
 
-class UniqueLoader(yaml.SafeLoader):
-    """Reject duplicate keys, including metadata that would otherwise be lost."""
-
-
-def mapping(loader, node, deep=False):
-    result = {}
-    for key_node, value_node in node.value:
-        key = loader.construct_object(key_node, deep=deep)
-        require(key not in result, f"Duplicate YAML key: {key}")
-        result[key] = loader.construct_object(value_node, deep=deep)
-    return result
-
-
-UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
-
-
 def frontmatter(path):
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         return {}
     match = re.match(r"\A---\n(.*?)\n---(?:\n|$)", text, re.S)
     require(match, f"Unclosed YAML: {path}")
-    result = yaml.load(match[1], Loader=UniqueLoader)
+    result = yaml.load(match[1], Loader=UniqueKeyLoader)
     require(isinstance(result, dict), f"Metadata must be an object: {path}")
     return result
 
@@ -152,14 +139,15 @@ def validate(root):
         edges = {}
         for rel in system["relations"]:
             require(rel["goal_id"] in goals, "Unknown relation goal")
-            members = {m["metric_id"] for m in goals[rel["goal_id"]]["metrics"]}
-            require({rel["from"], rel["to"]} <= members, "Relation scope")
+            members = {m["metric_id"]: m["definition_version"] for m in goals[rel["goal_id"]]["metrics"]}
+            require({rel["from"], rel["to"]} <= members.keys(), "Relation scope")
             require(rel["type"] in statuses and rel["status"] in statuses[rel["type"]], "Relation status")
             require(rel["basis"] and isinstance(rel["evidence"], list), "Relation basis")
             if rel["status"] in {"defined", "agreed", "supported", "rejected"}:
                 require(rel["evidence"], "Missing evidence")
             if rel["type"] == "calculated_from":
-                edges.setdefault(rel["from"], []).append(rel["to"])
+                src, dst = rel["from"], rel["to"]
+                edges.setdefault((src, members[src]), []).append((dst, members[dst]))
             relations += 1
         def visit(key, trail):
             require(key not in trail, "Calculation cycle")

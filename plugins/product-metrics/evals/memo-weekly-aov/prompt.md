@@ -1,6 +1,6 @@
 ---
 name: memo-weekly-aov
-tags: [memo, no-catalog]
+tags: [memo, review-regression, no-catalog]
 runs: 2
 max_turns: 12
 timeout_seconds: 300

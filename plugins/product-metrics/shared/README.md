@@ -1,6 +1,6 @@
 # Общие материалы Product Metrics
 
-Все шесть навыков используют этот единственный набор правил и шаблонов. Начало работы и установка описаны в README репозитория; после установки следуйте инструкциям выбранного навыка.
+Все навыки используют общий набор правил и шаблонов. Начало работы и установка описаны в README репозитория; после установки следуйте инструкциям выбранного навыка.
 
 - [Формат](references/FORMAT.md): поля карточки, версии и типы связей.
 - [Плейбук](references/PLAYBOOK.md): операции с определениями.
@@ -8,6 +8,7 @@
 - Ядро: [Принципы](references/PRINCIPLES.md) - объекты, переключатели, лестница свидетельств, шкала знания; [Рукопожатие с данными](references/DATA_HANDSHAKE.md) - приём CSV, таблицы, ответа MCP и запись свидетельства.
 - Режимы `metrics-system`: [карты и деревья](references/MAPS_AND_TREES.md), [стартовые наборы](references/STARTER_SETS.md), [метрики эксперимента](references/EXPERIMENT_METRICS.md), [OKR](references/OKR.md).
 - Режимы `metrics-review`: [ревью отчёта](references/DASHBOARD_REVIEW.md), [проверка vanity](references/VANITY_CHECK.md).
+- [North Star](references/NORTH_STAR.md) — аудит главной метрики, дерево входов и разбор изменения на [учебных заказах](examples/data/north-star-orders.csv).
 - Скиллы `diagnose-metric` и `metrics-memo`: [диагностика](references/DIAGNOSTICS.md), [ритм обзоров](references/REVIEW_CADENCE.md).
 - [Записки-примеры](examples/memos/): [AOV](examples/memos/diagnosis-aov.md), [Beacon](examples/memos/diagnosis-beacon.md), [недельный AOV](examples/memos/weekly-aov.md).
 - [Учебные ряды](examples/data/): `aov-weekly.csv`, `aov-segments.csv`, `wau-partition.csv`.
