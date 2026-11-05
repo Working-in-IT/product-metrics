@@ -132,10 +132,10 @@
 
 ## Установка в Codex
 
-Для установки версии из основной ветки репозитория выполните в терминале:
+Чтобы установить выпуск `v0.4.0`, выполните две команды в терминале.
 
 ```bash
-codex plugin marketplace add Working-in-IT/product-metrics --ref main
+codex plugin marketplace add Working-in-IT/product-metrics --ref v0.4.0
 codex plugin add product-metrics@working-in-it-metrics
 ```
 
@@ -205,7 +205,7 @@ python3 plugins/product-metrics/shared/examples/sql/run_examples.py
 
 Храните каталог команды в её собственной базе знаний или закрытом репозитории. Все участники используют этот каталог и согласованную версию плагина. Настройка командных путей находится в `CATALOG.md`; менять исходники плагина для этого не требуется.
 
-Если в Codex установлен `v0.3.0` с закреплённого тега, сначала удалите регистрацию источника командой `codex plugin marketplace remove working-in-it-metrics`, затем повторите обе команды установки выше с `--ref main`. Откройте новую сессию и попросите проверить кандидата в North Star. Для общей фиксированной версии команда может выбрать опубликованный тег вместо `main`. [Опубликованные релизы](https://github.com/Working-in-IT/product-metrics/releases) · [Обновление в Codex и Claude Code](plugins/product-metrics/shared/SHARING.md)
+Если в Codex установлен `v0.3.0` с закреплённого тега, удалите регистрацию источника командой `codex plugin marketplace remove working-in-it-metrics`. Затем выполните обе команды из раздела «Установка в Codex» и откройте новую сессию. Чтобы проверить новый навык, попросите оценить кандидата в North Star и укажите, какое действие пользователя попадает в расчёт. [Опубликованные релизы](https://github.com/Working-in-IT/product-metrics/releases) · [Обновление в Codex и Claude Code](plugins/product-metrics/shared/SHARING.md)
 
 ## Проверка и ограничения
 
